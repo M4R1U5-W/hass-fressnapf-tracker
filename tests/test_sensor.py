@@ -35,5 +35,5 @@ async def test_sensor_weight_history(hass, get_response):
 
     await hass.async_block_till_done()
 
-    sensor = hass.states.get("sensor.test_weight_history")
+    sensor = hass.states.get("sensor.test_weight")
     assert sensor.state == "21.5"
