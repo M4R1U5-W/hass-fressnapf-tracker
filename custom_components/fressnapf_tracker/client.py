@@ -1,6 +1,7 @@
 """Fressnapf API Client."""
 import json
 import logging
+from datetime import datetime, timedelta
 from typing import Any
 from httpx import AsyncClient
 
@@ -49,6 +50,17 @@ async def get_fressnapf_response(
         if "Device not found" in result["error"]:
             raise InvalidSerialNumber(result["error"])
         raise Exception(result["error"])
+
+    """Results from the TRIP-API"""
+    one_month_ago = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+    trip_url = f"https://itsmybike.cloud/api/pet_tracker/v2/devices/{serial_number}/trips_from/{one_month_ago}+0:0:0+-60?devicetoken={device_token}"
+    response = await client.get(trip_url, headers=headers)
+    try:
+        trip_result = response.json()
+        result["trips"] = trip_result["trips"]
+    except Exception:
+        result["trips"] = []
+
     return _transform_result(result)
 
 
