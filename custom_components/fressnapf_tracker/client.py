@@ -1,5 +1,5 @@
 """Fressnapf API Client."""
-
+import json
 import logging
 from typing import Any
 from httpx import AsyncClient
@@ -61,4 +61,11 @@ def _transform_result(result: dict[str, Any]) -> dict[str, Any]:
     if result["tracker_settings"]["features"]["sleep_mode"]:
         result["deep_sleep_value"] = result["deep_sleep"]["value"]
         result["deep_sleep_status"] = result["deep_sleep"]["status"]
+    if result["additional_parameters"]:
+        try:
+            additional_parameters = json.loads(result["additional_parameters"])
+        except json.decoder.JSONDecodeError:
+            additional_parameters = {}
+        result["weight_history"] = additional_parameters["weightList"]
+        result["weight_current"] = additional_parameters["weight"].replace(" kg", "")
     return result

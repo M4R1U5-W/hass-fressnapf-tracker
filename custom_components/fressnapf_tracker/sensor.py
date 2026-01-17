@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
+from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -10,7 +12,10 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE
+from homeassistant.const import (
+    UnitOfMass,
+    PERCENTAGE,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -29,13 +34,26 @@ SENSOR_ENTITY_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
         native_unit_of_measurement=PERCENTAGE,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+    SensorEntityDescription(
+        name="Weight Current",
+        key="weight_current",
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.WEIGHT,
+        native_unit_of_measurement=UnitOfMass.KILOGRAMS,
+    ),
+    SensorEntityDescription(
+        name="Weight History",
+        key="weight_history",
+        icon="mdi:weight-kilogram",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
 )
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: FressnapfTrackerConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+        hass: HomeAssistant,
+        entry: FressnapfTrackerConfigEntry,
+        async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the fressnapf_tracker sensors."""
 
@@ -58,6 +76,36 @@ class FressnapfTrackerSensor(FressnapfTrackerEntity, SensorEntity):
     @property
     def native_value(self) -> StateType | datetime:
         """Return the state of the resources if it has been received yet."""
-        if self.entity_description.key in self.coordinator.data:
-            return int(self.coordinator.data[self.entity_description.key])
+        data = self.coordinator.data
+
+        if self.entity_description.key == "weight_history":
+            # Aktueller Gewichtswert aus Liste (letzter Eintrag)
+            weight_list = data.get("weight_history", [])
+            if weight_list:
+                try:
+                    last_weight = weight_list[-1]["weight"]
+                    return float(last_weight.replace(" kg", ""))
+                except (ValueError, KeyError):
+                    return None
+
+        elif self.entity_description.key in data:
+            return float(data[self.entity_description.key])
+
+        return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return device state attributes."""
+        data = self.coordinator.data
+
+        if "weight_history" in data:
+            weight_list = data["weight_history"]
+            attrs = {}
+            for i, entry in enumerate(weight_list, 1):
+                attrs[f"weight_{i}"] = {
+                    "value": float(entry["weight"].replace(" kg", "")),
+                    "timestamp": entry["date"]
+                }
+            return attrs
+
         return None
