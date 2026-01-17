@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from datetime import datetime
 from typing import Any
 
@@ -14,7 +13,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import (
     UnitOfMass,
-    PERCENTAGE,
+    PERCENTAGE, UnitOfLength, UnitOfTime,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
@@ -40,6 +39,20 @@ SENSOR_ENTITY_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.WEIGHT,
         native_unit_of_measurement=UnitOfMass.KILOGRAMS,
+    ),
+    SensorEntityDescription(
+        name="Today Distance",
+        key="today_distance",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        device_class=SensorDeviceClass.DISTANCE,
+        native_unit_of_measurement=UnitOfLength.METERS,
+    ),
+    SensorEntityDescription(
+        name="Today Duration",
+        key="today_duration",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.SECONDS,
     ),
 )
 
@@ -72,8 +85,28 @@ class FressnapfTrackerSensor(FressnapfTrackerEntity, SensorEntity):
         """Return the state of the resources if it has been received yet."""
         data = self.coordinator.data
 
-        if self.entity_description.key == "weight_history":
-            # Aktueller Gewichtswert aus Liste (letzter Eintrag)
+        # Heutige Trips berechnen (00:00 bis jetzt)
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_distance = 0
+        today_duration = 0
+
+        trips = data.get("trips", [])
+        for trip in trips:
+            try:
+                trip_end = datetime.fromisoformat(trip["time_end"].replace("Z", "+00:00"))
+                if trip_end.date() == today_start.date():
+                    today_distance += int(trip["distance"])
+                    today_duration += int(trip["duration_s"])
+            except:
+                continue
+
+        if self.entity_description.key == "today_distance":
+            return today_distance
+
+        elif self.entity_description.key == "today_duration":
+            return today_duration
+
+        elif self.entity_description.key == "weight_history":
             weight_list = data.get("weight_history", [])
             if weight_list:
                 try:
@@ -91,23 +124,41 @@ class FressnapfTrackerSensor(FressnapfTrackerEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any] | None:
         """Return device state attributes."""
         data = self.coordinator.data
+        attrs = {}
 
+        # Gewichts-Historie
         if "weight_history" in data:
             weight_list = data["weight_history"]
-            attrs = {}
-
-            for i, entry in enumerate(weight_list, 1):
+            for i, entry in enumerate(weight_list[-5:], 1):
                 timestamp = entry["date"]
                 try:
                     date_str = datetime.fromtimestamp(timestamp / 1000).strftime("%Y-%m-%d %H:%M")
                 except:
                     date_str = str(timestamp)
-
-                attrs[f"history_{i}"] = {
+                attrs[f"weight_history_{i}"] = {
                     "weight": float(entry["weight"].replace(" kg", "")),
                     "date": date_str,
                     "timestamp": timestamp
                 }
-            return attrs
 
-        return None
+        # Heutige Trips Details
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_trips = []
+        trips = data.get("trips", [])
+        for trip in trips:
+            try:
+                trip_end = datetime.fromisoformat(trip["time_end"].replace("Z", "+00:00"))
+                if trip_end.date() == today_start.date():
+                    today_trips.append({
+                        "id": trip["id"],
+                        "distance": int(trip["distance"]),
+                        "duration_s": int(trip["duration_s"]),
+                        "start": trip["trip_start"],
+                        "end": trip["trip_end"]
+                    })
+            except:
+                continue
+
+        attrs["today_trips"] = today_trips
+
+        return attrs if attrs else None

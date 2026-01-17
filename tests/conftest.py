@@ -28,7 +28,7 @@ def expected_lingering_timers() -> bool:
 @pytest.fixture(name="get_response")
 async def get_response_fixture(respx_mock):
     """Mock the get response."""
-    mocked = respx_mock.get(
+    device_route = respx_mock.get(
         "https://itsmybike.cloud/api/pet_tracker/v2/devices/test_serialnumber?devicetoken=test_device_token"
     ).mock(
         return_value=Response(
@@ -36,7 +36,17 @@ async def get_response_fixture(respx_mock):
             json=json.loads(load_fixture("get_response.json")),
         )
     )
-    yield mocked
+
+    respx_mock.get(
+        url__regex=r"https://itsmybike.cloud/api/pet_tracker/v2/devices/test_serialnumber/trips_from/[0-9\-+:?]+devicetoken=test_device_token"
+    ).mock(
+        return_value=Response(
+            200,
+            json=json.loads(load_fixture("get_response_trips.json")),
+        )
+    )
+
+    yield device_route,
 
 
 @pytest.fixture(name="get_response_no_led")

@@ -20,7 +20,7 @@ async def test_sensor_battery(hass, get_response):
     await hass.async_block_till_done()
 
     sensor = hass.states.get("sensor.test_battery")
-    assert sensor.state == "81"
+    assert sensor.state == "81.0"
 
 
 async def test_sensor_weight_history(hass, get_response):
@@ -35,5 +35,37 @@ async def test_sensor_weight_history(hass, get_response):
 
     await hass.async_block_till_done()
 
-    sensor = hass.states.get("sensor.test_weight")
+    sensor = hass.states.get("sensor.test_weight_history")
     assert sensor.state == "21.5"
+
+
+async def test_sensor_today_distance(hass, get_response):
+    """Test that sensor works."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data=MOCK_CONFIG,
+    )
+    entry.add_to_hass(hass)
+
+    await hass.config_entries.async_setup(entry.entry_id)
+
+    await hass.async_block_till_done()
+
+    sensor = hass.states.get("sensor.test_today_distance")
+    assert sensor.state == "2687"
+
+
+async def test_sensor_today_distance(hass, get_response):
+    """Test that sensor works."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data=MOCK_CONFIG,
+    )
+    entry.add_to_hass(hass)
+
+    await hass.config_entries.async_setup(entry.entry_id)
+
+    await hass.async_block_till_done()
+
+    sensor = hass.states.get("sensor.test_today_duration")
+    assert sensor.state == "4454"
