@@ -35,17 +35,11 @@ SENSOR_ENTITY_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     SensorEntityDescription(
-        name="Weight Current",
-        key="weight_current",
+        name="Weight",
+        key="weight_history",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.WEIGHT,
         native_unit_of_measurement=UnitOfMass.KILOGRAMS,
-    ),
-    SensorEntityDescription(
-        name="Weight History",
-        key="weight_history",
-        icon="mdi:weight-kilogram",
-        entity_category=EntityCategory.DIAGNOSTIC,
     ),
 )
 
@@ -101,10 +95,18 @@ class FressnapfTrackerSensor(FressnapfTrackerEntity, SensorEntity):
         if "weight_history" in data:
             weight_list = data["weight_history"]
             attrs = {}
+
             for i, entry in enumerate(weight_list, 1):
-                attrs[f"weight_{i}"] = {
-                    "value": float(entry["weight"].replace(" kg", "")),
-                    "timestamp": entry["date"]
+                timestamp = entry["date"]
+                try:
+                    date_str = datetime.fromtimestamp(timestamp / 1000).strftime("%Y-%m-%d %H:%M")
+                except:
+                    date_str = str(timestamp)
+
+                attrs[f"history_{i}"] = {
+                    "weight": float(entry["weight"].replace(" kg", "")),
+                    "date": date_str,
+                    "timestamp": timestamp
                 }
             return attrs
 
