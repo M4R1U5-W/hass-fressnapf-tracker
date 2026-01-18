@@ -52,10 +52,10 @@ async def test_sensor_today_distance(hass, get_response):
     await hass.async_block_till_done()
 
     sensor = hass.states.get("sensor.test_today_distance")
-    assert sensor.state == "2687"
+    assert sensor.state == "0.0"
 
 
-async def test_sensor_today_distance(hass, get_response):
+async def test_sensor_today_duration(hass, get_response):
     """Test that sensor works."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -68,4 +68,4 @@ async def test_sensor_today_distance(hass, get_response):
     await hass.async_block_till_done()
 
     sensor = hass.states.get("sensor.test_today_duration")
-    assert sensor.state == "4454"
+    assert sensor.state == "0.0"

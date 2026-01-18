@@ -45,14 +45,14 @@ SENSOR_ENTITY_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
         key="today_distance",
         state_class=SensorStateClass.TOTAL_INCREASING,
         device_class=SensorDeviceClass.DISTANCE,
-        native_unit_of_measurement=UnitOfLength.METERS,
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
     ),
     SensorEntityDescription(
         name="Today Duration",
         key="today_duration",
         state_class=SensorStateClass.TOTAL_INCREASING,
         device_class=SensorDeviceClass.DURATION,
-        native_unit_of_measurement=UnitOfTime.SECONDS,
+        native_unit_of_measurement=UnitOfTime.HOURS,
     ),
 )
 
@@ -100,6 +100,9 @@ class FressnapfTrackerSensor(FressnapfTrackerEntity, SensorEntity):
             except:
                 continue
 
+        today_distance = round(int(today_distance) / 1000, 1)
+        today_duration = round(int(today_duration) / 3600, 1)
+
         if self.entity_description.key == "today_distance":
             return today_distance
 
@@ -116,7 +119,7 @@ class FressnapfTrackerSensor(FressnapfTrackerEntity, SensorEntity):
                     return None
 
         elif self.entity_description.key in data:
-            return float(data[self.entity_description.key])
+            return int(data[self.entity_description.key])
 
         return None
 
